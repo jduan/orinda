@@ -1,16 +1,26 @@
 module Main where
 
+import qualified Data.Text as T
+import qualified Data.Text.IO as TIO
 import System.Environment
 
-countData :: String -> (Int, Int, Int)
-countData s = (length s, length (words s), length (lines s))
+countData :: T.Text -> (Int, Int, Int)
+countData s = (charCount, wordCount, lineCount)
+  where
+    charCount = T.length s
+    wordCount = (length . T.words) s
+    lineCount = (length . T.lines) s
 
-countStrFmt :: (Int, Int, Int) -> String
+countStrFmt :: (Int, Int, Int) -> T.Text
 countStrFmt (chars, words, lines) =
-  unwords ["chars:", show chars, "words:", show words, "lines:", show lines]
+  T.pack
+    (unwords ["chars:", show chars, "words:", show words, "lines:", show lines])
 
 main :: IO ()
 main = do
   args <- getArgs
-  fileData <- readFile (head args)
-  putStrLn $ (countStrFmt . countData) fileData
+  let fileName = head args
+  input <- TIO.readFile fileName
+  let summary = (countStrFmt . countData) input
+  TIO.appendFile "stats.dat" summary
+  TIO.putStrLn summary
