@@ -42,6 +42,18 @@ randomSortSection bytes = do
   start <- randomRIO (0, bytesLength - sectionSize)
   return $ sortSection start sectionSize bytes
 
+glitchActions :: BC.ByteString -> IO BC.ByteString
+glitchActions bytes =
+  foldM
+    (\bytes func -> func bytes)
+    bytes
+    [ randomReplaceByte
+    , randomSortSection
+    , randomReplaceByte
+    , randomSortSection
+    , randomReplaceByte
+    ]
+
 main :: IO ()
 main = do
   args <- getArgs
