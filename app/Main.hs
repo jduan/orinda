@@ -27,12 +27,27 @@ randomReplaceByte bytes = do
   charVal <- randomRIO (0, 255)
   return (replaceByte location charVal bytes)
 
+sortSection :: Int -> Int -> BC.ByteString -> BC.ByteString
+sortSection start size bytes = mconcat [before, changed, after]
+  where
+    (before, rest) = BC.splitAt start bytes
+    (target, after) = BC.splitAt size rest
+    changed = BC.reverse (BC.sort target)
+
+randomSortSection :: BC.ByteString -> IO BC.ByteString
+randomSortSection bytes = do
+  let sectionSize = 25
+  let bytesLength = BC.length bytes
+  start <- randomRIO (0, bytesLength - sectionSize)
+  return $ sortSection start sectionSize bytes
+
 main :: IO ()
 main = do
   args <- getArgs
   let fileName = head args
   imageFile <- BC.readFile fileName
-  glitched <- randomReplaceByte imageFile
+  -- glitched <- randomReplaceByte imageFile
+  glitched <- randomSortSection imageFile
   let glitchedFileName = mconcat ["glitched_", fileName]
   BC.writeFile glitchedFileName glitched
   print "all done"
