@@ -1,26 +1,38 @@
 module Main where
 
-import qualified Data.Text as T
-import qualified Data.Text.IO as TIO
+import qualified Data.ByteString as B
+import qualified Data.ByteString.Char8 as BC
 import System.Environment
+import System.Random (randomRIO)
 
-countData :: T.Text -> (Int, Int, Int)
-countData s = (charCount, wordCount, lineCount)
+intToChar :: Int -> Char
+intToChar int = toEnum safeInt
   where
-    charCount = T.length s
-    wordCount = (length . T.words) s
-    lineCount = (length . T.lines) s
+    safeInt = int `mod` 255
 
-countStrFmt :: (Int, Int, Int) -> T.Text
-countStrFmt (chars, words, lines) =
-  T.pack
-    (unwords ["chars:", show chars, "words:", show words, "lines:", show lines])
+intToBC :: Int -> BC.ByteString
+intToBC int = BC.pack [intToChar int]
+
+replaceByte :: Int -> Int -> BC.ByteString -> BC.ByteString
+replaceByte location charVal bytes = mconcat [before, newChar, after]
+  where
+    (before, rest) = BC.splitAt location bytes
+    after = BC.drop 1 rest
+    newChar = intToBC charVal
+
+randomReplaceByte :: BC.ByteString -> IO BC.ByteString
+randomReplaceByte bytes = do
+  let bytesLength = BC.length bytes
+  location <- randomRIO (1, bytesLength)
+  charVal <- randomRIO (0, 255)
+  return (replaceByte location charVal bytes)
 
 main :: IO ()
 main = do
   args <- getArgs
   let fileName = head args
-  input <- TIO.readFile fileName
-  let summary = (countStrFmt . countData) input
-  TIO.appendFile "stats.dat" summary
-  TIO.putStrLn summary
+  imageFile <- BC.readFile fileName
+  glitched <- randomReplaceByte imageFile
+  let glitchedFileName = mconcat ["glitched_", fileName]
+  BC.writeFile glitchedFileName glitched
+  print "all done"
