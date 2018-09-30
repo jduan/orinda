@@ -1,5 +1,6 @@
 module Main where
 
+import Control.Monad (foldM)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as BC
 import System.Environment
@@ -46,8 +47,25 @@ main = do
   args <- getArgs
   let fileName = head args
   imageFile <- BC.readFile fileName
-  -- glitched <- randomReplaceByte imageFile
-  glitched <- randomSortSection imageFile
   let glitchedFileName = mconcat ["glitched_", fileName]
+  -- bad way:
+  -- glitched1 <- randomReplaceByte imageFile
+  -- glitched2 <- randomSortSection glitched1
+  -- glitched3 <- randomReplaceByte glitched2
+  -- glitched4 <- randomSortSection glitched3
+  -- glitched5 <- randomReplaceByte glitched4
+  -- BC.writeFile glitchedFileName glitched5
+  --
+  -- good way:
+  glitched <-
+    foldM
+      (\bytes func -> func bytes)
+      imageFile
+      [ randomReplaceByte
+      , randomSortSection
+      , randomReplaceByte
+      , randomSortSection
+      , randomReplaceByte
+      ]
   BC.writeFile glitchedFileName glitched
   print "all done"
