@@ -31,7 +31,7 @@ library:
 executables:
   orinda-exe:
     main:                Main.hs
-    source-dirs:         app
+    source-dirs:         app/glitch
     ghc-options:
     - -threaded
     - -rtsopts
@@ -39,10 +39,9 @@ executables:
     dependencies:
     - orinda
 
-executables:
   marc_to_html:
-    main:                MarcToHtml.hs
-    source-dirs:         app
+    main:                Main.hs
+    source-dirs:         app/marc_to_html
     ghc-options:
     - -threaded
     - -rtsopts
