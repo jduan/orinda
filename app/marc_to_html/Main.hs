@@ -27,6 +27,21 @@ bookToHtml book = mconcat ["<p>\n", titleInTags, authorInTags, "</p>\n"]
     titleInTags = mconcat ["<strong>", title book, "</strong>\n"]
     authorInTags = mconcat ["<em>", author book, "</em>\n"]
 
+booksToHtml :: [Book] -> Html
+booksToHtml books =
+  mconcat
+    [ "<html>\n"
+    , "<head><title>books</title>"
+    , "<meta charset='utf-8'/>"
+    , "</head>\n"
+    , "<body>\n"
+    , booksHtml
+    , "\n</body>\n"
+    , "</html>"
+    ]
+  where
+    booksHtml = (mconcat . map bookToHtml) books
+
 book1 :: Book
 book1 =
   Book
@@ -40,6 +55,8 @@ book2 = Book {title = "A Short History of Decay", author = "Ciroan, Emil"}
 book3 :: Book
 book3 = Book {title = "The Tears of Eros", author = "Bataille, Georges"}
 
+books = [book1, book2, book3]
+
 main :: IO ()
 main = do
-  print "hello!"
+  TIO.writeFile "books.html" (booksToHtml books)
