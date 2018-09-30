@@ -39,6 +39,17 @@ executables:
     dependencies:
     - orinda
 
+executables:
+  marc_to_html:
+    main:                MarcToHtml.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - orinda
+
 tests:
   orinda-test:
     main:                Spec.hs
