@@ -58,9 +58,13 @@ book3 = Book {title = "The Tears of Eros", author = "Bataille, Georges"}
 
 books = [book1, book2, book3]
 
-type MarcRecordRaw = B.ByteString
-
 type MarcLeaderRaw = B.ByteString
+
+type MarcDirectoryRaw = B.ByteString
+
+type MarcBaseRecordRaw = B.ByteString
+
+type MarcRecordRaw = B.ByteString
 
 -- The MARC record consists of 3 main parts:
 -- * the leader: length of the record, where to find the base record, etc
@@ -92,6 +96,68 @@ allRecords bytes =
     then []
     else let (record, rest) = nextAndRest bytes
           in record : allRecords rest
+
+-- the 12th to the 16th bytes of the leader is the address of the base
+-- record. Index is 0 based.
+getBaseAddress :: MarcLeaderRaw -> Int
+getBaseAddress leader = (rawToInt . B.take 5 . B.drop 12) leader
+
+getDirectoryLength :: MarcLeaderRaw -> Int
+getDirectoryLength leader = getBaseAddress leader - (leaderLength + 1)
+
+getDirectory :: MarcRecordRaw -> MarcDirectoryRaw
+getDirectory record = (B.take dirLength . B.drop leaderLength) record
+  where
+    dirLength = (getDirectoryLength . getLeader) record
+
+getBaseRecord :: MarcRecordRaw -> MarcBaseRecordRaw
+getBaseRecord record = B.drop baseAddress record
+  where
+    leader = getLeader record
+    baseAddress = getBaseAddress leader
+
+type MarcDirectoryEntryRaw = B.ByteString
+
+-- each field in the directory is 12 bytes
+-- tag of the field (first 3 bytes)
+-- length of the field (next 4 bytes)
+-- where the field starts relative to the base address (rest of the bytes)
+dirEntryLength :: Int
+dirEntryLength = 12
+
+splitDirectory :: MarcDirectoryRaw -> [MarcDirectoryEntryRaw]
+splitDirectory dir =
+  if dir == B.empty
+    then []
+    else let (first, rest) = B.splitAt dirEntryLength dir
+          in first : splitDirectory rest
+
+data FieldMetadata = FieldMetadata
+  { tag :: T.Text
+  , fieldLength :: Int
+  , fieldStart :: Int
+  } deriving (Show, Eq)
+
+makeFieldMetadata :: MarcDirectoryEntryRaw -> FieldMetadata
+makeFieldMetadata entry = FieldMetadata tag length start
+  where
+    (rawTag, rest) = B.splitAt 3 entry
+    tag = E.decodeUtf8 rawTag
+    (rawLength, rawStart) = B.splitAt 4 rest
+    length = rawToInt rawLength
+    start = rawToInt rawStart
+
+getFieldMetadata :: [MarcDirectoryEntryRaw] -> [FieldMetadata]
+getFieldMetadata = map makeFieldMetadata
+
+type FieldText = T.Text
+
+-- Retrieve a field based on FieldMetadata
+getTextField :: MarcRecordRaw -> FieldMetadata -> FieldText
+getTextField record metadata = E.decodeUtf8 bytes
+  where
+    baseAtEntry = B.drop (fieldStart metadata) (getBaseRecord record)
+    bytes = B.take (fieldLength metadata) baseAtEntry
 
 -- You can download the MARC data here: (ohsu_ncnm_wscc_bibs.mrc)
 -- https://archive.org/download/marc_oregon_summit_records/catalog_files/
