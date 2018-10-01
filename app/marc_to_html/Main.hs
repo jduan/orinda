@@ -8,6 +8,7 @@ import Data.Maybe
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as E
 import qualified Data.Text.IO as TIO
+import System.Environment
 
 type Author = T.Text
 
@@ -57,6 +58,46 @@ book3 = Book {title = "The Tears of Eros", author = "Bataille, Georges"}
 
 books = [book1, book2, book3]
 
+type MarcRecordRaw = B.ByteString
+
+type MarcLeaderRaw = B.ByteString
+
+-- The MARC record consists of 3 main parts:
+-- * the leader: length of the record, where to find the base record, etc
+-- * the directory: where to find author for example
+-- * the base record: where all the info you need is located
+-- The leader is the first 24 bytes of the record.
+leaderLength :: Int
+leaderLength = 24
+
+getLeader :: MarcRecordRaw -> MarcLeaderRaw
+getLeader record = B.take leaderLength record
+
+rawToInt :: B.ByteString -> Int
+rawToInt = (read . T.unpack . E.decodeUtf8)
+
+-- The first 5 bytes of the leader tells the length of the record
+getRecordLength :: MarcLeaderRaw -> Int
+getRecordLength leader = rawToInt (B.take 5 leader)
+
+-- Break a ByteString into the first record and the remaining ByteString
+nextAndRest :: B.ByteString -> (MarcRecordRaw, B.ByteString)
+nextAndRest bytes = B.splitAt length bytes
+  where
+    length = (getRecordLength . getLeader) bytes
+
+allRecords :: B.ByteString -> [MarcRecordRaw]
+allRecords bytes =
+  if bytes == B.empty
+    then []
+    else let (record, rest) = nextAndRest bytes
+          in record : allRecords rest
+
+-- You can download the MARC data here: (ohsu_ncnm_wscc_bibs.mrc)
+-- https://archive.org/download/marc_oregon_summit_records/catalog_files/
 main :: IO ()
 main = do
-  TIO.writeFile "books.html" (booksToHtml books)
+  args <- getArgs
+  marcData <- B.readFile (head args)
+  let marcRecords = allRecords marcData
+  print (length marcRecords)
