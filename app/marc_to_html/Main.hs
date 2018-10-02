@@ -225,9 +225,14 @@ processRecords n = booksToHtml . pairsToBooks . take n . marcToPairs
 
 -- You can download the MARC data here: (ohsu_ncnm_wscc_bibs.mrc)
 -- https://archive.org/download/marc_oregon_summit_records/catalog_files/
+--
+-- This project shows that despite doing a fairly intensive IO task, the
+-- final "main" is remarkabley minimal.
 main :: IO ()
 main = do
   args <- getArgs
   marcData <- B.readFile (head args)
+  -- The generated HTML file won't have 500 entries because some entries
+  -- in the original file have empty authors or titles.
   let processed = processRecords 500 marcData
   TIO.putStrLn processed
